@@ -1,17 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ImageBackground,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 
 // ✅ ENV
@@ -30,14 +30,20 @@ export default function Login() {
   // 🔥 SEND OTP API
   const sendOtp = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter email');
+      // Alert.alert('Error', 'Please enter email');
+        Toast.show({
+          type: 'error',
+          text1: '',
+          text2: 'Please enter email',
+        });
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await fetch(`${BASE_URL}/send-otp`, {
+    //   const res = await fetch(`${BASE_URL}/send-otp`, {
+        const res = await fetch('https://praveshinventory.online/api/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -49,14 +55,28 @@ export default function Login() {
 
       if (data.status === 1) {
         setShowOtp(true);
-        Alert.alert('Success', data.msg);
+        // Alert.alert('Success', data.msg);
+          Toast.show({
+            type: 'success',
+            text1: '',
+            text2: data.msg,
+          });
       } else {
-        Alert.alert('Error', data.msg);
+        // Alert.alert('Error', data.msg);
+        Toast.show({
+          type: 'error',
+          text1: '',
+          text2: data.msg,
+        });
       }
 
     } catch (error) {
       console.log(error);
-      Alert.alert('Error', 'Network error');
+        Toast.show({
+          type: 'error',
+          text1: '',
+          text2: error,
+        });
     } finally {
       setLoading(false);
     }
@@ -65,14 +85,19 @@ export default function Login() {
   // 🔥 VERIFY OTP API
   const verifyOtp = async () => {
     if (!otp) {
-      Alert.alert('Error', 'Please enter OTP');
+      Toast.show({
+        type: 'error',
+        text1: '',
+        text2: 'Please enter OTP',
+      });
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await fetch(`${BASE_URL}/verify-otp`, {
+    //   const res = await fetch(`${BASE_URL}/verify-otp`, {
+        const res = await fetch('https://praveshinventory.online/api/verify-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -95,16 +120,29 @@ export default function Login() {
           JSON.stringify(data.user_details)
         );
 
-        Alert.alert('Success', data.msg);
+        // Alert.alert('Success', data.msg);
+          Toast.show({
+            type: 'success',
+            text1: '',
+            text2: data.msg,
+          });
 
         router.replace('/enquiry'); // better than push
       } else {
-        Alert.alert('Error', data.msg);
+       Toast.show({
+          type: 'error',
+          text1: '',
+          text2: data.msg,
+        });
       }
 
     } catch (error) {
       console.log(error);
-      Alert.alert('Error', 'Network error');
+      Toast.show({
+          type: 'success',
+          text1: '',
+          text2: 'Network error',
+        });
     } finally {
       setLoading(false);
     }
@@ -140,7 +178,7 @@ export default function Login() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.btnText}>SEND OTP</Text>
+                  <Text style={styles.btnText}>Login</Text>
                 )}
               </TouchableOpacity>
             </>

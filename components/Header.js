@@ -23,22 +23,26 @@ const styles = StyleSheet.create({
     height: 70,
     backgroundColor: '#fff',
     flexDirection: 'row',
+    alignItems: 'flex-end',
+
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    // elevation: 4,
-    zIndex: 10
+
+    paddingLeft: 20,  
+    paddingRight: 0, 
+
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
+    // elevation: 5
   },
 
   leftLogo: {
-    width: 75,
-    height: 40
+    width: 70,
+    height: 45
   },
 
   rightLogo: {
-    width: 150,
-    height: 40
+    width: 120,
+    height: 45,
+    // alignSelf: 'flex-end'
   }
 });
