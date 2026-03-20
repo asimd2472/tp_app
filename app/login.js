@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ImageBackground,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +21,25 @@ export default function Login() {
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // 🔥 TIMER STATE
+  const [timer, setTimer] = useState(0); // seconds
+  const [canResend, setCanResend] = useState(false);
+
+  // ⏱️ TIMER EFFECT
+  useEffect(() => {
+    let interval;
+
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      setCanResend(true);
+    }
+
+    return () => clearInterval(interval);
+  }, [timer]);
 
   // 🔥 SEND OTP
   const sendOtp = async () => {
@@ -45,7 +64,44 @@ export default function Login() {
 
       if (data.status === 1) {
         setShowOtp(true);
+
+        // ✅ START 5 MIN TIMER (300 sec)
+        setTimer(300);
+        setCanResend(false);
+
         Toast.show({ type: 'success', text2: data.msg });
+      } else {
+        Toast.show({ type: 'error', text2: data.msg });
+      }
+
+    } catch (error) {
+      Toast.show({ type: 'error', text2: 'Network error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 RESEND OTP
+  const resendOtp = async () => {
+    if (!canResend) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch('https://praveshinventory.online/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+
+      if (data.status === 1) {
+        // ✅ RESET TIMER
+        setTimer(300);
+        setCanResend(false);
+
+        Toast.show({ type: 'success', text2: 'OTP Resent' });
       } else {
         Toast.show({ type: 'error', text2: data.msg });
       }
@@ -84,7 +140,6 @@ export default function Login() {
 
         Toast.show({ type: 'success', text2: data.msg });
 
-        // ✅ go to tabs
         router.replace('/(tabs)/inventory');
 
       } else {
@@ -96,6 +151,13 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ⏱️ FORMAT TIMER MM:SS
+  const formatTime = () => {
+    const min = Math.floor(timer / 60);
+    const sec = timer % 60;
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
   };
 
   return (
@@ -135,6 +197,17 @@ export default function Login() {
                 onChangeText={setOtp}
                 keyboardType="numeric"
               />
+
+              {/* ⏱️ TIMER */}
+              {!canResend ? (
+                <Text style={styles.timerText}>
+                  Resend OTP in {formatTime()}
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={resendOtp}>
+                  <Text style={styles.resendText}>Resend OTP</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity style={styles.button} onPress={verifyOtp}>
                 {loading ? (
@@ -180,10 +253,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#0077b6',
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 10
   },
   btnText: {
     color: '#fff',
+    fontWeight: 'bold'
+  },
+  timerText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10
+  },
+  resendText: {
+    color: '#0077b6',
+    textAlign: 'center',
+    marginBottom: 10,
     fontWeight: 'bold'
   }
 });
