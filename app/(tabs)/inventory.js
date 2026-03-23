@@ -1,23 +1,81 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  FlatList,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import Header from '../../components/Header';
 
 const BASE_URL = 'https://praveshinventory.online/api';
 
+// Custom Picker component with Modal
+const CustomPicker = ({
+  label,
+  selectedValue,
+  onValueChange,
+  options,
+  placeholder = 'Select an option',
+}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleSelect = (value) => {
+    onValueChange(value);
+    setModalVisible(false);
+  };
+
+  const selectedLabel =
+    options.find((item) => item === selectedValue) || placeholder;
+
+  return (
+    <View>
+      <TouchableOpacity
+        style={styles.customPickerButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <Text style={styles.customPickerText}>{selectedLabel}</Text>
+      </TouchableOpacity>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <FlatList
+              data={options}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => handleSelect(item)}
+                >
+                  <Text style={styles.modalItemText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+};
+
 export default function Enquiry() {
-      const navigation = useNavigation();
-    const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
   const [type, setType] = useState('');
   const [model, setModel] = useState('');
   const [design, setDesign] = useState('');
@@ -33,14 +91,14 @@ export default function Enquiry() {
   const [colours, setColours] = useState([]);
   const [orientations, setOrientations] = useState([]);
   const [features, setFeatures] = useState([]);
+  const [itemCount, setItemCount] = useState(0);
+  const [designsDesc, setDesignsDesc] = useState('');
+
   const router = useRouter();
-
-  // 🔥 Load Types (initial)
-
   const [token, setToken] = useState('');
+
   useEffect(() => {
     AsyncStorage.getItem('token').then(setToken);
-    // console.log('token', token)
   }, []);
 
   useEffect(() => {
@@ -50,8 +108,8 @@ export default function Enquiry() {
         const response = await axios.get(`${BASE_URL}/inventory/types`, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (response.data) {
           setTypes(response.data);
@@ -70,7 +128,7 @@ export default function Enquiry() {
     if (token) fetchTypes();
   }, [token]);
 
-  // 🔥 TYPE → MODEL
+  // TYPE → MODEL
   const handleType = (value) => {
     setType(value);
     setModel('');
@@ -83,16 +141,18 @@ export default function Enquiry() {
     const fetchModels = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/models`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/models`,
           { type: value },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setModels(response.data);
+        inventoryItemCount(value, '', '', '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -107,23 +167,26 @@ export default function Enquiry() {
     if (token) fetchModels();
   };
 
-  // 🔥 MODEL → DESIGN
+  // MODEL → DESIGN
   const handleModel = (value) => {
     setModel(value);
 
     const fetchDesigns = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/designs`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/designs`,
           { type, model: value },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setDesigns(response.data.designs);
+        setDesignsDesc(response?.data?.description || '');
+        inventoryItemCount(type, value, '', '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -138,23 +201,25 @@ export default function Enquiry() {
     if (token) fetchDesigns();
   };
 
-  // 🔥 DESIGN → SIZE
+  // DESIGN → SIZE
   const handleDesign = (value) => {
     setDesign(value);
 
     const fetchSizes = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/dimention`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/dimention`,
           { type, model, design: value },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setSizes(response.data);
+        inventoryItemCount(type, model, value, '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -169,23 +234,25 @@ export default function Enquiry() {
     if (token) fetchSizes();
   };
 
-  // 🔥 SIZE → COLOUR
+  // SIZE → COLOUR
   const handleSize = (value) => {
     setSize(value);
 
     const fetchColours = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/colour`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/colour`,
           { type, model, design, dimention: value },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setColours(response.data);
+        inventoryItemCount(type, model, design, value, '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -200,23 +267,25 @@ export default function Enquiry() {
     if (token) fetchColours();
   };
 
-  // 🔥 COLOUR → ORIENTATION
+  // COLOUR → ORIENTATION
   const handleColour = (value) => {
     setColour(value);
 
     const fetchOrientations = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/orientation`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/orientation`,
           { type, model, design, dimention: size, colour: value },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setOrientations(response.data);
+        inventoryItemCount(type, model, design, size, value, '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -231,30 +300,32 @@ export default function Enquiry() {
     if (token) fetchOrientations();
   };
 
-  // 🔥 ORIENTATION → FEATURE
+  // ORIENTATION → FEATURE
   const handleOrientation = (value) => {
     setOrientation(value);
 
     const fetchFeatures = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${BASE_URL}/inventory/special_feature`,
+        const response = await axios.post(
+          `${BASE_URL}/inventory/special_feature`,
           {
             type,
             model,
             design,
             dimention: size,
             colour,
-            orientation: value
+            orientation: value,
           },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setFeatures(response.data);
+        inventoryItemCount(type, model, design, size, colour, value, '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -269,12 +340,68 @@ export default function Enquiry() {
     if (token) fetchFeatures();
   };
 
+  const inventoryItemCount = async (
+    selectedType,
+    selectedModel,
+    selectedDesign,
+    selectedSize,
+    selectedColour,
+    selectedOrientation,
+    selectedFeature
+  ) => {
+    try {
+      const payload = {
+        type: selectedType,
+        model: selectedModel,
+        design: selectedDesign,
+        dimention: selectedSize,
+        colour: selectedColour,
+        orientation: selectedOrientation,
+        special_feature: selectedFeature,
+      };
+      console.log('inventoryItemCount payload:', payload);
+      const response = await axios.post(
+        `${BASE_URL}/inventory/inventory-item-check`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log('inventoryItemCount response:', response.data.itemCount);
+      setItemCount(response.data.itemCount);
+    } catch (err) {
+      if (err.response) {
+        console.log('inventoryItemCount error status:', err.response.status);
+        console.log('inventoryItemCount error data:', err.response.data);
+      } else {
+        console.log('inventoryItemCount error:', err.message);
+      }
+    }
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <Header />
       {loading && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Loading...</Text>
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10,
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+            Loading...
+          </Text>
         </View>
       )}
       <ScrollView
@@ -282,68 +409,73 @@ export default function Enquiry() {
         contentContainerStyle={{ paddingBottom: 50 }}
       >
         <Text style={styles.title}>Tata Pravesh Inventory</Text>
+        {itemCount !== 0 && (
+          <Text style={styles.itemCount}>{itemCount} items selected</Text>
+        )}
         {/* TYPE */}
         <Text style={styles.label}>Product Type</Text>
-        <Picker selectedValue={type} onValueChange={handleType} style={styles.input}>
-          <Picker.Item label="Select Product Type" value="" />
-          {types.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={type}
+          onValueChange={handleType}
+          options={types}
+          placeholder="Select Product Type"
+        />
 
         {/* MODEL */}
         <Text style={styles.label}>Model</Text>
-        <Picker selectedValue={model} onValueChange={handleModel} style={styles.input}>
-          <Picker.Item label="Select Model" value="" />
-          {models.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={model}
+          onValueChange={handleModel}
+          options={models}
+          placeholder="Select Model"
+        />
+
+        {designsDesc !== '' && <Text style={styles.label}>{designsDesc}</Text>}
 
         {/* DESIGN */}
         <Text style={styles.label}>Design</Text>
-        <Picker selectedValue={design} onValueChange={handleDesign} style={styles.input}>
-          <Picker.Item label="Select Design" value="" />
-          {designs.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={design}
+          onValueChange={handleDesign}
+          options={designs}
+          placeholder="Select Design"
+        />
 
         {/* SIZE */}
         <Text style={styles.label}>Size</Text>
-        <Picker selectedValue={size} onValueChange={handleSize} style={styles.input}>
-          <Picker.Item label="Select Size" value="" />
-          {sizes.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={size}
+          onValueChange={handleSize}
+          options={sizes}
+          placeholder="Select Size"
+        />
 
         {/* COLOUR */}
         <Text style={styles.label}>Colour</Text>
-        <Picker selectedValue={colour} onValueChange={handleColour} style={styles.input}>
-          <Picker.Item label="Select Colour" value="" />
-          {colours.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={colour}
+          onValueChange={handleColour}
+          options={colours}
+          placeholder="Select Colour"
+        />
 
         {/* ORIENTATION */}
         <Text style={styles.label}>Orientation</Text>
-        <Picker selectedValue={orientation} onValueChange={handleOrientation} style={styles.input}>
-          <Picker.Item label="Select Orientation" value="" />
-          {orientations.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={orientation}
+          onValueChange={handleOrientation}
+          options={orientations}
+          placeholder="Select Orientation"
+        />
 
         {/* FEATURE */}
         <Text style={styles.label}>Special Feature</Text>
-        <Picker selectedValue={feature} onValueChange={setFeature} style={styles.input}>
-          <Picker.Item label="Select Special Feature" value="" />
-          {features.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <CustomPicker
+          selectedValue={feature}
+          onValueChange={setFeature}
+          options={features}
+          placeholder="Select Special Feature"
+        />
 
         <TouchableOpacity
           style={styles.nextBtn}
@@ -357,7 +489,7 @@ export default function Enquiry() {
                 dimention: size,
                 colour,
                 orientation,
-                special_feature: feature || 'No Special Features',
+                special_feature: feature,
               };
               const response = await axios.post(
                 `${BASE_URL}/inventory/stock`,
@@ -365,16 +497,12 @@ export default function Enquiry() {
                 {
                   headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                   },
                 }
               );
-              console.log('API response:', response.data);
+              console.log('Stock API response:', response.data);
               if (response.data) {
-                // navigation.navigate('enquiry-result', {
-                //   hyderabad: response.data.hyderabad,
-                //   ncr: response.data.ncr,
-                // });
                 router.push({
                   pathname: '/(tabs)/enquiry-result',
                   params: {
@@ -384,7 +512,7 @@ export default function Enquiry() {
                 });
               }
             } catch (err) {
-              console.log('API error:', err);
+              console.log('Stock API error:', err);
               alert('Something went wrong. Please try again.');
             } finally {
               setLoading(false);
@@ -402,27 +530,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e6f9f',
-    padding: 20
+    padding: 35,
   },
-
   title: {
     color: '#fff',
     fontSize: 20,
-    marginBottom: 20,
-    fontWeight: 'bold'
+    marginBottom: 10,
+    fontWeight: 'bold',
   },
-
   label: {
     color: '#fff',
-    marginTop: 10
+    marginTop: 10,
+    fontSize: 16,
   },
-
-  input: {
+  itemCount: {
+    color: '#fff',
+    fontSize: 15,
+    textAlign: 'right',
+  },
+  customPickerButton: {
     backgroundColor: '#fff',
     borderRadius: 6,
-    marginBottom: 10
+    padding: 12,
+    marginTop: 5,
+    marginBottom: 10,
   },
-
+  customPickerText: {
+    color: '#000',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    width: '80%',
+    maxHeight: '70%',
+    padding: 10,
+  },
+  modalItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    color: '#000',
+    fontSize: 16,
+  },
   nextBtn: {
     backgroundColor: '#003049',
     paddingVertical: 10,
@@ -435,10 +594,8 @@ const styles = StyleSheet.create({
     minWidth: 80,
     width: 'auto',
   },
-
   nextText: {
     color: '#fff',
-    fontWeight: 'bold'
-  }
+    fontWeight: 'bold',
+  },
 });
-
