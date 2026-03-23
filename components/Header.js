@@ -20,7 +20,7 @@ export default function Header() {
 
 const styles = StyleSheet.create({
   container: {
-    height: 70,
+    height: 80,
     backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -29,6 +29,7 @@ const styles = StyleSheet.create({
 
     paddingLeft: 20,  
     paddingRight: 0, 
+    marginBottom: 4,
 
     // borderBottomLeftRadius: 20,
     // borderBottomRightRadius: 20,
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
   },
 
   rightLogo: {
-    width: 120,
+    width: 145,
     height: 45,
     // alignSelf: 'flex-end'
   }

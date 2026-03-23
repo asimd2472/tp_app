@@ -9,15 +9,15 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import Header from '../../components/Header';
 
 const BASE_URL = 'https://praveshinventory.online/api';
 
 export default function Enquiry() {
-      const navigation = useNavigation();
-    const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
   const [type, setType] = useState('');
   const [model, setModel] = useState('');
   const [design, setDesign] = useState('');
@@ -33,14 +33,14 @@ export default function Enquiry() {
   const [colours, setColours] = useState([]);
   const [orientations, setOrientations] = useState([]);
   const [features, setFeatures] = useState([]);
+  const [itemCount, setItemCount] = useState(0);
+  const [designsDesc, setDesignsDesc] = useState('');
+  
   const router = useRouter();
-
-  // 🔥 Load Types (initial)
-
   const [token, setToken] = useState('');
+
   useEffect(() => {
     AsyncStorage.getItem('token').then(setToken);
-    // console.log('token', token)
   }, []);
 
   useEffect(() => {
@@ -93,6 +93,7 @@ export default function Enquiry() {
           }
         );
         setModels(response.data);
+        inventoryItemCount(value, '', '', '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -124,6 +125,8 @@ export default function Enquiry() {
           }
         );
         setDesigns(response.data.designs);
+        setDesignsDesc(response?.data?.description || '');
+        inventoryItemCount(type, value, '', '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -155,6 +158,7 @@ export default function Enquiry() {
           }
         );
         setSizes(response.data);
+        inventoryItemCount(type, model, value, '', '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -186,6 +190,7 @@ export default function Enquiry() {
           }
         );
         setColours(response.data);
+        inventoryItemCount(type, model, design, value, '', '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -217,6 +222,7 @@ export default function Enquiry() {
           }
         );
         setOrientations(response.data);
+        inventoryItemCount(type, model, design, size, value, '', '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -255,6 +261,7 @@ export default function Enquiry() {
           }
         );
         setFeatures(response.data);
+        inventoryItemCount(type, model, design, size, colour, value, '');
       } catch (err) {
         if (err.response) {
           console.log('error status', err.response.status);
@@ -267,6 +274,39 @@ export default function Enquiry() {
       }
     };
     if (token) fetchFeatures();
+  };
+  
+  const inventoryItemCount = async (selectedType, selectedModel, selectedDesign, selectedSize, selectedColour, selectedOrientation, selectedFeature) => {
+      try {
+        const payload = {
+          type: selectedType,
+          model: selectedModel,
+          design: selectedDesign,
+          dimention: selectedSize,
+          colour: selectedColour,
+          orientation: selectedOrientation,
+          special_feature: selectedFeature,
+        };
+        console.log('inventoryItemCount payload:', payload);
+        const response = await axios.post(`${BASE_URL}/inventory/inventory-item-check`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        console.log('inventoryItemCount response:', response.data.itemCount);
+        setItemCount(response.data.itemCount);
+      } catch (err) {
+        if (err.response) {
+          console.log('inventoryItemCount error status:', err.response.status);
+          console.log('inventoryItemCount error data:', err.response.data);
+        } else {
+          console.log('inventoryItemCount error:', err.message);
+        }
+      }
   };
 
   return (
@@ -282,68 +322,89 @@ export default function Enquiry() {
         contentContainerStyle={{ paddingBottom: 50 }}
       >
         <Text style={styles.title}>Tata Pravesh Inventory</Text>
+        {itemCount !== 0 && (
+          <Text style={styles.itemCount}>{itemCount} items selected</Text>
+        )}
         {/* TYPE */}
         <Text style={styles.label}>Product Type</Text>
-        <Picker selectedValue={type} onValueChange={handleType} style={styles.input}>
-          <Picker.Item label="Select Product Type" value="" />
-          {types.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={type} onValueChange={handleType} style={styles.picker} color="#000">
+            <Picker.Item label="Select Product Type" value="" />
+            {types.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         {/* MODEL */}
         <Text style={styles.label}>Model</Text>
-        <Picker selectedValue={model} onValueChange={handleModel} style={styles.input}>
-          <Picker.Item label="Select Model" value="" />
-          {models.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={model} onValueChange={handleModel} style={styles.picker} color="#000">
+            <Picker.Item label="Select Model" value="" />
+            {models.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
+
+        {designsDesc !== '' && (
+          <Text style={styles.label}>{designsDesc}</Text>
+        )}
 
         {/* DESIGN */}
         <Text style={styles.label}>Design</Text>
-        <Picker selectedValue={design} onValueChange={handleDesign} style={styles.input}>
-          <Picker.Item label="Select Design" value="" />
-          {designs.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={design} onValueChange={handleDesign} style={styles.picker} color="#000">
+            <Picker.Item label="Select Design" value="" />
+            {designs.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         {/* SIZE */}
         <Text style={styles.label}>Size</Text>
-        <Picker selectedValue={size} onValueChange={handleSize} style={styles.input}>
-          <Picker.Item label="Select Size" value="" />
-          {sizes.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={size} onValueChange={handleSize} style={styles.picker} color="#000">
+            <Picker.Item label="Select Size" value="" />
+            {sizes.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         {/* COLOUR */}
         <Text style={styles.label}>Colour</Text>
-        <Picker selectedValue={colour} onValueChange={handleColour} style={styles.input}>
-          <Picker.Item label="Select Colour" value="" />
-          {colours.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={colour} onValueChange={handleColour} style={styles.picker} color="#000">
+            <Picker.Item label="Select Colour" value="" />
+            {colours.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         {/* ORIENTATION */}
         <Text style={styles.label}>Orientation</Text>
-        <Picker selectedValue={orientation} onValueChange={handleOrientation} style={styles.input}>
-          <Picker.Item label="Select Orientation" value="" />
-          {orientations.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={orientation} onValueChange={handleOrientation} style={styles.picker} color="#000">
+            <Picker.Item label="Select Orientation" value="" />
+            {orientations.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         {/* FEATURE */}
         <Text style={styles.label}>Special Feature</Text>
-        <Picker selectedValue={feature} onValueChange={setFeature} style={styles.input}>
-          <Picker.Item label="Select Special Feature" value="" />
-          {features.map((item, i) => (
-            <Picker.Item key={i} label={item} value={item} />
-          ))}
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={feature} onValueChange={setFeature} style={styles.picker} color="#000">
+            <Picker.Item label="Select Special Feature" value="" />
+            {features.map((item, i) => (
+              <Picker.Item key={i} label={item} value={item} />
+            ))}
+          </Picker>
+        </View>
 
         <TouchableOpacity
           style={styles.nextBtn}
@@ -357,7 +418,7 @@ export default function Enquiry() {
                 dimention: size,
                 colour,
                 orientation,
-                special_feature: feature || 'No Special Features',
+                special_feature: feature,
               };
               const response = await axios.post(
                 `${BASE_URL}/inventory/stock`,
@@ -369,12 +430,8 @@ export default function Enquiry() {
                   },
                 }
               );
-              console.log('API response:', response.data);
+              console.log('Stock API response:', response.data);
               if (response.data) {
-                // navigation.navigate('enquiry-result', {
-                //   hyderabad: response.data.hyderabad,
-                //   ncr: response.data.ncr,
-                // });
                 router.push({
                   pathname: '/(tabs)/enquiry-result',
                   params: {
@@ -384,7 +441,7 @@ export default function Enquiry() {
                 });
               }
             } catch (err) {
-              console.log('API error:', err);
+              console.log('Stock API error:', err);
               alert('Something went wrong. Please try again.');
             } finally {
               setLoading(false);
@@ -402,25 +459,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e6f9f',
-    padding: 20
+    padding: 35
   },
 
   title: {
     color: '#fff',
     fontSize: 20,
-    marginBottom: 20,
+    marginBottom: 10,
     fontWeight: 'bold'
   },
 
   label: {
     color: '#fff',
-    marginTop: 10
+    marginTop: 10,
+    fontSize: 16,
   },
 
-  input: {
+  itemCount: {
+    color: '#fff',
+    fontSize: 15,
+    textAlign: 'right',
+  },
+
+  pickerWrapper: {
     backgroundColor: '#fff',
     borderRadius: 6,
-    marginBottom: 10
+    overflow: 'hidden',
+    marginBottom: 0,
+    marginTop: 5,
+  },
+
+  picker: {
+    backgroundColor: 'transparent',
   },
 
   nextBtn: {
@@ -441,4 +511,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   }
 });
-
